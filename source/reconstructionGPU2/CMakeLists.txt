@@ -22,6 +22,7 @@ if (NOT DEFINED CUDA_npp_LIBRARY AND COMMAND find_cuda_helper_libs AND NOT CUDA_
   find_cuda_helper_libs(npp)
 endif ()
 include_directories(${CUDA_INCLUDE_DIRS})
+include_directories("/usr/local/cuda/samples/common/inc/") # for helper_cuda.h
 #message("CUDA_INCLUDE_DIRS: ${CUDA_INCLUDE_DIRS}")
 # hide variable as SDK now (usually) part of CUDA Toolkit
 # mark_as_advanced(FORCE CUDA_SDK_ROOT_DIR)
@@ -65,7 +66,7 @@ else()
   #set(CUDA_NVCC_FLAGS "-gencode;arch=compute_12,code=sm_12;--disable-warnings")
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../IRTKSimple2/common++/include
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/../IRTKSimple2/common++/include
 	${CMAKE_CURRENT_SOURCE_DIR}/../IRTKSimple2/contrib++/include
 	${CMAKE_CURRENT_SOURCE_DIR}/../IRTKSimple2/geometry++/include
 	${CMAKE_CURRENT_SOURCE_DIR}/../IRTKSimple2/image++/include
