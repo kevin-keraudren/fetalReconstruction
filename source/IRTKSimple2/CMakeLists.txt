@@ -6,6 +6,11 @@ endif(COMMAND cmake_policy)
 
 PROJECT(IRTK)
 
+# we need to include IRTK directories first,
+# otherwise the code will be compiled against
+# what is installed on the system
+INCLUDE(${IRTK_SOURCE_DIR}/config/IRTKInclude.cmake)
+
 #INCLUDE(CTest)
 
 # Finding GNU scientific library GSL
@@ -42,8 +47,6 @@ OPTION(BUILD_WITH_TBB "Use TBB library for multithreading support" ON)
 
 #SUBDIRS(common++/src geometry++/src image++/src contrib++/src applications packages wrapping)
 SUBDIRS(common++/src geometry++/src image++/src contrib++/src packages)
-
-INCLUDE(${IRTK_SOURCE_DIR}/config/IRTKInclude.cmake)
 
 SET(EXECUTABLE_OUTPUT_PATH ${IRTK_BINARY_DIR}/bin CACHE STRING
   "Where to put the executables")

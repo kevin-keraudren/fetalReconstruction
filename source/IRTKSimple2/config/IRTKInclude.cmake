@@ -2,8 +2,31 @@
 GET_FILENAME_COMPONENT(CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_FILE} PATH)
 
 # Prefer project-own Find<Package>.cmake modules for FIND_PACKAGE().
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_MODULE_PATH})
 
+# Set those ones first, otherwise we need to uninstall IRTK to avoid using
+# old headers from a previous installation during the build
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/common++/include)
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/geometry++/include)
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/image++/include)
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/contrib++/include)
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/packages/transformation/include)
+INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/packages/registration/include)
+
+LINK_DIRECTORIES(${IRTK_BINARY_DIR}/lib)
+
+# Options to build with nifti, znz and possibly fslio
+OPTION(BUILD_WITH_NIFTI "Build using NIFTI support" ON)
+IF (BUILD_WITH_NIFTI)
+   ADD_DEFINITIONS(-DHAS_NIFTI)
+   ADD_DEFINITIONS(-DHAS_ZLIB)
+   INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/nifti/niftilib)
+   INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/nifti/znzlib)
+   INCLUDE_DIRECTORIES(BEFORE ${IRTK_SOURCE_DIR}/nifti/zlib)
+ENDIF (BUILD_WITH_NIFTI)
+
+# Now that we have include everything that comes from IRTK,
+# we can deal with libraries that are installed on the system.
 
 # Option to produce condor executables
 #OPTION(BUILD_CONDOR_EXE "Build condor executables" OFF)
@@ -135,15 +158,6 @@ ENDIF (WRAP_CYTHON)
 
 ADD_DEFINITIONS(-DIMPERIAL -DANSI -DHAS_CONTRIB -DNO_BOUNDS -DENABLE_UNIX_COMPRESS)
 
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/common++/include)
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/geometry++/include)
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/image++/include)
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/contrib++/include)
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/packages/transformation/include)
-INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/packages/registration/include)
-
-LINK_DIRECTORIES(${IRTK_BINARY_DIR}/lib) 
-
 # Option to build with PNG or not.
 OPTION(BUILD_WITH_PNG "Build using PNG" OFF)
 
@@ -182,15 +196,9 @@ IF (BUILD_WITH_VTK)
    ENDIF (VTK_FOUND)
 ENDIF (BUILD_WITH_VTK)
 
-
-# Options to build with nifti, znz and possibly fslio
+# We add these LINK_LIBRARIES at the end because the order of link libraries matters
 OPTION(BUILD_WITH_NIFTI "Build using NIFTI support" ON)
 IF (BUILD_WITH_NIFTI)
-   ADD_DEFINITIONS(-DHAS_NIFTI)
-   ADD_DEFINITIONS(-DHAS_ZLIB)
-   INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/nifti/niftilib)
-   INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/nifti/znzlib)
-   INCLUDE_DIRECTORIES(${IRTK_SOURCE_DIR}/nifti/zlib)
    LINK_LIBRARIES(znz)
    #LINK_LIBRARIES(zlib)
    LINK_LIBRARIES(niftiio)
