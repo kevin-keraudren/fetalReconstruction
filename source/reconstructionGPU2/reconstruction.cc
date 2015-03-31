@@ -102,7 +102,7 @@ int main(int argc, char **argv)
   vector<float> stackMotion;
 
   // Default values.
-  int templateNumber = -1;
+  int templateNumber = 0;
   irtkRealImage *mask = NULL;
   int iterations = 9; //9 //2 for Shepp-Logan is enough
   bool debug = false;
@@ -537,7 +537,9 @@ int main(int argc, char **argv)
 
   //Create template volume with isotropic resolution 
   //if resolution==0 it will be determined from in-plane resolution of the image
-  resolution = reconstruction.CreateTemplate(stacks[templateNumber], resolution);
+  // we create template from mask instead of stacks[templateNumber]
+  // in case the mask covers the whole anatomy and the template stack does not
+  resolution = reconstruction.CreateTemplate(*mask, resolution);
 
   //Set mask to reconstruction object. 
   reconstruction.SetMask(mask, smooth_mask);
@@ -593,8 +595,6 @@ int main(int argc, char **argv)
   //Mask is transformed to the all other stacks and they are cropped
   for (i = 0; i < nStacks; i++)
   {
-    //template stack has been cropped already
-    if ((i == templateNumber)) continue;
     //transform the mask
     irtkRealImage m = reconstruction.GetMask();
     reconstruction.TransformMask(stacks[i], m, stack_transformations[i]);

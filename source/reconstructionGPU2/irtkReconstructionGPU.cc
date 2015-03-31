@@ -72,6 +72,64 @@ using namespace boost::filesystem;
 
 /* Auxiliary functions (not reconstruction specific) */
 
+void headertool_dofin( irtkGreyImage &image,
+                       irtkRigidTransformation &transformation ) {
+
+    irtkImageAttributes attr = image.GetImageAttributes();
+
+    // Origin:
+    transformation.Transform( attr._xorigin,
+                               attr._yorigin,
+                               attr._zorigin );
+
+    // Grid spacings:
+    irtkVector v(3);
+    irtkVector u(3);
+
+    // Zero vector.
+    u.Initialize(3);
+    transformation.Transform(u(0), u(1), u(2));
+    
+    for (int i = 0; i < 3; i++)
+        v(i) = attr._xaxis[i];
+    
+    transformation.Transform(v(0), v(1), v(2));
+    v = v - u;
+    attr._dx = attr._dx * v.Norm();
+    
+    for (int i = 0; i < 3; i++)
+        v(i) = attr._yaxis[i];
+		
+    transformation.Transform(v(0), v(1), v(2));
+    v = v - u;
+    attr._dy = attr._dy * v.Norm();
+
+    for (int i = 0; i < 3; i++)
+        v(i) = attr._zaxis[i];
+    
+    transformation.Transform(v(0), v(1), v(2));
+    v = v - u;
+    attr._dz = attr._dz * v.Norm();
+
+    // Axes:
+    // Isolate rotation part of transformation.
+    irtkRigidTransformation rotation;
+    for (int i = 3; i < 6; i++)
+        rotation.Put(i, transformation.Get(i));
+
+    rotation.Transform(attr._xaxis[0], attr._xaxis[1], attr._xaxis[2]);
+    rotation.Transform(attr._yaxis[0], attr._yaxis[1], attr._yaxis[2]);
+    rotation.Transform(attr._zaxis[0], attr._zaxis[1], attr._zaxis[2]);
+
+    // Grid size:
+    // Remains the same so no need to do anything.
+
+    // Update image attributes
+    image.PutOrientation(attr._xaxis,attr._yaxis,attr._zaxis);
+    image.PutOrigin(attr._xorigin,attr._yorigin,attr._zorigin);
+    image.PutPixelSize(attr._dx,attr._dy,attr._dz);
+}
+
 void bbox(irtkRealImage &stack,
   irtkRigidTransformation &transformation,
   double &min_x,
@@ -955,6 +1013,9 @@ void irtkReconstruction::StackRegistrations(vector<irtkRealImage>& stacks,
         }
   }
 
+  // apply template transformation
+  headertool_dofin( target, stack_transformations[templateNumber] );
+  
   irtkRigidTransformation offset;
   ResetOrigin(target, offset);
 
