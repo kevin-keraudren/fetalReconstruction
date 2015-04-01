@@ -360,13 +360,13 @@ public:
 
   ///Save slices
   void SaveSlices();
-  void SlicesInfo(const char* filename);
+  void SlicesInfo(const char* filename, vector<string> &stack_files);
 
   ///Save weights
   void SaveWeights();
 
   ///Save transformations
-  void SaveTransformations();
+  void SaveTransformations(const char* folder);
   void GetTransformations(vector<irtkRigidTransformation> &transformations);
   void SetTransformations(vector<irtkRigidTransformation> &transformations);
 

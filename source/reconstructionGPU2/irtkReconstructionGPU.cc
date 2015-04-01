@@ -4660,13 +4660,13 @@ void irtkReconstruction::SaveWeights()
   }
 }
 
-void irtkReconstruction::SaveTransformations()
+void irtkReconstruction::SaveTransformations( const char* folder )
 {
   char buffer[256];
   for (unsigned int inputIndex = 0; inputIndex < _slices.size(); inputIndex++) {
-    sprintf(buffer, "transformation%i.dof", inputIndex);
+    sprintf(buffer, "%s/transformation%i.dof", folder, inputIndex);
     _transformations[inputIndex].irtkTransformation::Write(buffer);
-    sprintf(buffer, "transformation_gpu%i.dof", inputIndex);
+    sprintf(buffer, "%s/transformation_gpu%i.dof", folder, inputIndex);
     _transformations_gpu[inputIndex].irtkTransformation::Write(buffer);
   }
 }
@@ -4687,44 +4687,45 @@ void irtkReconstruction::GetSlices(vector<irtkRealImage> &slices)
     slices.push_back(_slices[i]);
 }
 
-void irtkReconstruction::SlicesInfo(const char* filename)
+void irtkReconstruction::SlicesInfo( const char* filename,
+                                     vector<string> &stack_files )
 {
-  ofstream info;
-  info.open(filename);
+    ofstream info;
+    info.open( filename );
 
-  // header
-  info << "stack_index" << "\t"
-    << "included" << "\t" // Included slices
-    << "excluded" << "\t"  // Excluded slices
-    << "outside" << "\t"  // Outside slices
-    << "weight" << "\t"
-    << "scale" << "\t"
-    // << _stack_factor[i] << "\t"
-    << "TranslationX" << "\t"
-    << "TranslationY" << "\t"
-    << "TranslationZ" << "\t"
-    << "RotationX" << "\t"
-    << "RotationY" << "\t"
-    << "RotationZ" << endl;
-
-  for (int i = 0; i < _slices.size(); i++) {
-    irtkRigidTransformation& t = _transformations[i];
-    info << _stack_index[i] << "\t"
-      << (((_slice_weight_cpu[i] >= 0.5) && (_slice_inside_cpu[i])) ? 1 : 0) << "\t" // Included slices
-      << (((_slice_weight_cpu[i] < 0.5) && (_slice_inside_cpu[i])) ? 1 : 0) << "\t"  // Excluded slices
-      << ((!(_slice_inside_cpu[i])) ? 1 : 0) << "\t"  // Outside slices
-      << _slice_weight_cpu[i] << "\t"
-      << _scale_cpu[i] << "\t"
-      // << _stack_factor[i] << "\t"
-      << t.GetTranslationX() << "\t"
-      << t.GetTranslationY() << "\t"
-      << t.GetTranslationZ() << "\t"
-      << t.GetRotationX() << "\t"
-      << t.GetRotationY() << "\t"
-      << t.GetRotationZ() << endl;
-  }
-
-  info.close();
+    // header
+    info << "stack_index" << "\t"
+         << "stack_name" << "\t"
+         << "included" << "\t" // Included slices
+         << "excluded" << "\t"  // Excluded slices
+         << "outside" << "\t"  // Outside slices
+         << "weight" << "\t"
+         << "scale" << "\t"
+         << "TranslationX" << "\t"
+         << "TranslationY" << "\t"
+         << "TranslationZ" << "\t"
+         << "RotationX" << "\t"
+         << "RotationY" << "\t"
+         << "RotationZ" << endl;
+    
+    for (int i = 0; i < (int) _slices.size(); i++) {
+        irtkRigidTransformation& t = _transformations_gpu[i];
+        info << _stack_index[i] << "\t"
+             << stack_files[_stack_index[i]] << "\t"
+             << (((_slice_weight_gpu[i] >= 0.5) && (_slice_inside_gpu[i]))?1:0) << "\t" // Included slices
+             << (((_slice_weight_gpu[i] < 0.5) && (_slice_inside_gpu[i]))?1:0) << "\t"  // Excluded slices
+             << ((!(_slice_inside_gpu[i]))?1:0) << "\t"  // Outside slices
+             << _slice_weight_gpu[i] << "\t"
+             << _scale_gpu[i] << "\t"
+             << t.GetTranslationX() << "\t"
+             << t.GetTranslationY() << "\t"
+             << t.GetTranslationZ() << "\t"
+             << t.GetRotationX() << "\t"
+             << t.GetRotationY() << "\t"
+             << t.GetRotationZ() << endl;
+    }
+ 
+    info.close(); 
 }
 
 /* end Set/Get/Save operations */

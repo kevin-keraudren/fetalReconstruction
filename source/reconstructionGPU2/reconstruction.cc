@@ -59,6 +59,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <time.h>  
 //#include <irtkEvaluation.h>
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 namespace po = boost::program_options;
 
@@ -122,6 +123,8 @@ int main(int argc, char **argv)
   string tfolder;
   //folder to replace slices with registered slices, if given
   string sfolder;
+  // folder to save slice-to-volume registrations, if given
+  string ofolder;
   //flag to swich the intensity matching on and off
   bool intensity_matching = true;
   unsigned int rec_iterations_first = 4;
@@ -153,6 +156,8 @@ int main(int argc, char **argv)
   unsigned int T1PackageSize = 0;
   unsigned int numDevicesToUse = UINT_MAX;
   bool useSINCPSF = false;
+
+  string info_filename;
 
   try
   {
@@ -188,6 +193,8 @@ int main(int argc, char **argv)
       ("devices,d", po::value< vector<int> >(&devicesToUse)->multitoken(), "  Select the CP > 3.0 GPUs on which the reconstruction should be executed. Default: all devices > CP 3.0")
       ("tfolder", po::value< string >(&tfolder), "[folder] Use existing slice-to-volume transformations to initialize the reconstruction.")
       ("sfolder", po::value< string >(&sfolder), "[folder] Use existing registered slices and replace loaded ones (have to be equally many as loaded from stacks).")
+      ("ofolder", po::value< string >(&ofolder), "[folder] Save slice-to-volume transformations to folder.")
+      ("info", po::value< string >(&info_filename)->default_value("slice_info.tsv"), "[filename] Filename for slice information in tab-sparated columns.")
       ("referenceVolume", po::value<string>(&referenceVolumeName), "Name for an optional reference volume. Will be used as inital reconstruction.")
       ("T1PackageSize", po::value<unsigned int>(&T1PackageSize), "is a test if you can register T1 to T2 using NMI and only one iteration")
       ("numDevicesToUse", po::value<unsigned int>(&numDevicesToUse), "sets how many GPU devices to use in case of automatic device selection. Default is as many as available.")
@@ -1135,6 +1142,11 @@ int main(int argc, char **argv)
   reconstructed = reconstruction.GetReconstructed();
   reconstructed.Write(outputName.c_str());
 
+  if (!ofolder.empty()) {
+    boost::filesystem::create_directory(ofolder);
+    reconstruction.SaveTransformations(ofolder.c_str());
+  }
+  
   //write computation time to file for tuner test
 
   /*ofstream timefile;
@@ -1142,4 +1154,8 @@ int main(int argc, char **argv)
   timefile << mss << "\n";
   timefile.close();*/
   //The end of main()
+
+  if (!info_filename.empty())
+    reconstruction.SlicesInfo( info_filename.c_str(),
+                               inputStacks );
 }
