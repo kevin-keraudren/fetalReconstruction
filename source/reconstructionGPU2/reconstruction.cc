@@ -158,6 +158,9 @@ int main(int argc, char **argv)
   bool useSINCPSF = false;
 
   string info_filename;
+  string mask_update;
+  int mask_update_iter;
+  float ga;
 
   try
   {
@@ -184,6 +187,8 @@ int main(int argc, char **argv)
       ("force_exclude", po::value< vector<int> >(&force_excluded)->multitoken(), "force_exclude [number of slices] [ind1] ... [indN]  Force exclusion of slices with these indices.")
       ("no_intensity_matching", po::value< bool >(&intensity_matching), "Switch off intensity matching.")
       ("log_prefix", po::value< string >(&log_id), "Prefix for the log file.")
+      ("mask_update", po::value< string >(&mask_update), "Binary to update the mask.")
+      ("mask_update_iter", po::value< int >(&mask_update_iter)->default_value(4), "Iteration when the mask is updated.")
       ("debug", po::value< bool >(&debug)->default_value(false), " Debug mode - save intermediate results.")
       ("debug_gpu", po::bool_switch(&debug_gpu)->default_value(false), " Debug only GPU results.")
       ("rec_iterations_first", po::value< unsigned int >(&rec_iterations_first)->default_value(4), " Set number of superresolution iterations")
@@ -195,6 +200,7 @@ int main(int argc, char **argv)
       ("sfolder", po::value< string >(&sfolder), "[folder] Use existing registered slices and replace loaded ones (have to be equally many as loaded from stacks).")
       ("ofolder", po::value< string >(&ofolder), "[folder] Save slice-to-volume transformations to folder.")
       ("info", po::value< string >(&info_filename)->default_value("slice_info.tsv"), "[filename] Filename for slice information in tab-sparated columns.")
+      ("ga", po::value< float >(&ga)->default_value(0), "[float] Gestational age.")
       ("referenceVolume", po::value<string>(&referenceVolumeName), "Name for an optional reference volume. Will be used as inital reconstruction.")
       ("T1PackageSize", po::value<unsigned int>(&T1PackageSize), "is a test if you can register T1 to T2 using NMI and only one iteration")
       ("numDevicesToUse", po::value<unsigned int>(&numDevicesToUse), "sets how many GPU devices to use in case of automatic device selection. Default is as many as available.")
@@ -857,7 +863,7 @@ int main(int argc, char **argv)
       if (debug)
       {
         reconstructed = reconstruction.GetReconstructed();
-        sprintf(buffer, "GaussianReconstruction_CPU%i.nii", iter);
+        sprintf(buffer, "GaussianReconstruction_CPU%i.nii.gz", iter);
         reconstructed.Write(buffer);
       }
     }
@@ -866,7 +872,7 @@ int main(int argc, char **argv)
       if (debug || debug_gpu)
       {
         reconstructedGPU = reconstruction.GetReconstructedGPU();
-        sprintf(buffer, "GaussianReconstruction_GPU%i.nii", iter);
+        sprintf(buffer, "GaussianReconstruction_GPU%i.nii.gz", iter);
         reconstructedGPU.Write(buffer);
       }
     }
@@ -952,7 +958,7 @@ int main(int argc, char **argv)
 
 #if 1
         reconstructed = reconstruction.GetReconstructed();
-        sprintf(buffer, "superCPU%i.nii", i);
+        sprintf(buffer, "superCPU%i.nii.gz", i);
         reconstructed.Write(buffer);
 #endif
       }
@@ -1017,12 +1023,12 @@ int main(int argc, char **argv)
         if (useCPU)
         {
           reconstructed = reconstruction.GetReconstructed();
-          sprintf(buffer, "superCPU%i.nii", i);
+          sprintf(buffer, "superCPU%i.nii.gz", i);
           reconstructed.Write(buffer);
         }
         else {
           reconstructedGPU = reconstruction.GetReconstructedGPU();
-          sprintf(buffer, "superGPU%i.nii", i);
+          sprintf(buffer, "superGPU%i.nii.gz", i);
           reconstructedGPU.Write(buffer);
         }
       }
@@ -1044,14 +1050,14 @@ int main(int argc, char **argv)
     if (useCPU)
     {
       reconstructed = reconstruction.GetReconstructed();
-      sprintf(buffer, "image%i_CPU.nii", iter);
+      sprintf(buffer, "image%i_CPU.nii.gz", iter);
       reconstructed.Write(buffer);
     }
     else {
       reconstruction.SyncCPU();
       stats.sample("SyncCPU");
       reconstructed = reconstruction.GetReconstructed();
-      sprintf(buffer, "image%i_GPU.nii", iter);
+      sprintf(buffer, "image%i_GPU.nii.gz", iter);
       reconstructed.Write(buffer);
       //get quality gradient
       /*if (iter > 0)
@@ -1090,6 +1096,21 @@ int main(int argc, char **argv)
       cout.rdbuf(strm_buffer);
     }
     printf("\n");
+
+    // refine the mask using the current reconstruction
+    if (!mask_update.empty() && iter==mask_update_iter) {
+      sprintf(buffer, "%s $(pwd)/image%i_GPU.nii.gz $(pwd)/updated_mask%i.nii.gz %f",
+              mask_update.c_str(), iter, iter, ga);
+      system(buffer);
+      //update mask
+      sprintf(buffer, "updated_mask%i.nii.gz", iter);
+      mask = new irtkRealImage((char*)(buffer));
+      reconstruction.SetMask(mask, smooth_mask);
+      //update slices
+      reconstruction.MaskSlices();
+      // get data on GPU
+      reconstruction.SyncGPU();
+    }
   }// end of interleaved registration-reconstruction iterations
 
   //reconstruction.SyncCPU();
